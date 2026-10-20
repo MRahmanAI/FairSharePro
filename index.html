@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staff Activity &amp; Capacity Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f3f6f6;
+    --panel:#ffffff;
+    --ink:#132623;
+    --ink-soft:#4b615d;
+    --line:#dbe6e4;
+    --teal:#0f6d63;
+    --teal-deep:#0a4a44;
+    --teal-soft:#e3f1ef;
+    --amber:#c07a1e;
+    --amber-soft:#fbecd7;
+    --red:#b8412f;
+    --red-soft:#fbe6e2;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(15,40,35,.06), 0 8px 24px -16px rgba(15,40,35,.25);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e1715;
+      --panel:#152220;
+      --ink:#e9f2f0;
+      --ink-soft:#9fb6b1;
+      --line:#263634;
+      --teal:#4fb3a4;
+      --teal-deep:#7fcabd;
+      --teal-soft:#1b2e2b;
+      --amber:#e0a94f;
+      --amber-soft:#332a17;
+      --red:#e2796a;
+      --red-soft:#33201d;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e1715;
+    --panel:#152220;
+    --ink:#e9f2f0;
+    --ink-soft:#9fb6b1;
+    --line:#263634;
+    --teal:#4fb3a4;
+    --teal-deep:#7fcabd;
+    --teal-soft:#1b2e2b;
+    --amber:#e0a94f;
+    --amber-soft:#332a17;
+    --red:#e2796a;
+    --red-soft:#33201d;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Segoe UI", Inter, -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    line-height:1.45;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 64px;}
+  header.page{margin-bottom:22px;}
+  header.page .eyebrow{
+    font-size:13px; color:var(--teal); font-weight:600; letter-spacing:.02em;
+  }
+  header.page h1{
+    margin:4px 0 6px; font-size:26px; font-weight:700; letter-spacing:-.01em;
+  }
+  header.page p{margin:0; color:var(--ink-soft); font-size:14.5px; max-width:62ch;}
+
+  .grid-top{
+    display:grid; grid-template-columns: 340px 1fr; gap:18px; margin-bottom:18px;
+  }
+  @media (max-width:820px){ .grid-top{grid-template-columns:1fr;} }
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:20px;
+  }
+  .panel h2{margin:0 0 14px; font-size:15px; font-weight:700;}
+  .panel h2 span.count{color:var(--ink-soft); font-weight:500;}
+
+  label{display:block; font-size:12.5px; color:var(--ink-soft); margin:12px 0 5px;}
+  label:first-of-type{margin-top:0;}
+  input[type=text], select{
+    width:100%; padding:9px 10px; border-radius:9px; border:1px solid var(--line);
+    background:var(--bg); color:var(--ink); font-size:14.5px; font-family:inherit;
+  }
+  input[type=text]:focus, select:focus{outline:2px solid var(--teal); outline-offset:1px;}
+
+  .wte-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:5px;}
+  .wte-grid button{
+    padding:7px 0; border-radius:8px; border:1px solid var(--line); background:var(--bg);
+    color:var(--ink); font-size:13px; cursor:pointer; font-family:inherit;
+  }
+  .wte-grid button.active{background:var(--teal); border-color:var(--teal); color:#fff; font-weight:600;}
+  .wte-grid button:hover:not(.active){border-color:var(--teal);}
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    padding:10px 16px; border-radius:9px; border:none; background:var(--teal); color:#fff;
+    font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; width:100%; margin-top:16px;
+  }
+  .btn:hover{background:var(--teal-deep);}
+  .btn.secondary{background:transparent; color:var(--ink-soft); border:1px solid var(--line); width:auto; padding:8px 12px; margin-top:0;}
+  .btn.secondary:hover{border-color:var(--red); color:var(--red);}
+  .btn.ghost{background:transparent; color:var(--teal); border:1px solid var(--teal); width:auto; padding:7px 12px; font-size:13px; margin-top:0;}
+
+  .stat-row{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  @media (max-width:700px){ .stat-row{grid-template-columns:repeat(2,1fr);} }
+  .stat{
+    background:var(--teal-soft); border-radius:12px; padding:14px 14px;
+  }
+  .stat .num{font-size:22px; font-weight:700; color:var(--teal-deep);}
+  .stat .lbl{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th{
+    text-align:left; font-size:11.5px; color:var(--ink-soft); font-weight:600;
+    padding:8px 10px; border-bottom:1px solid var(--line);
+  }
+  td{padding:10px 10px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  tr.staff-row{cursor:pointer;}
+  tr.staff-row:hover{background:var(--teal-soft);}
+  .name-cell{font-weight:600;}
+  .role-tag{
+    display:inline-block; font-size:11.5px; padding:2px 8px; border-radius:999px;
+    background:var(--line); color:var(--ink-soft); font-weight:600;
+  }
+  .bar-cell{min-width:150px;}
+  .bar-track{position:relative; height:9px; border-radius:6px; background:var(--line); overflow:hidden;}
+  .bar-fill{position:absolute; left:0; top:0; bottom:0; border-radius:6px; background:var(--teal);}
+  .bar-fill.over{background:var(--red);}
+  .bar-meta{font-size:11.5px; color:var(--ink-soft); margin-top:4px;}
+  .status-pill{font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px;}
+  .status-ok{background:var(--teal-soft); color:var(--teal-deep);}
+  .status-tight{background:var(--amber-soft); color:var(--amber);}
+  .status-over{background:var(--red-soft); color:var(--red);}
+  .empty{padding:40px 10px; text-align:center; color:var(--ink-soft); font-size:14px;}
+  .remove-x{background:none; border:none; color:var(--ink-soft); font-size:16px; cursor:pointer; padding:2px 6px; border-radius:6px;}
+  .remove-x:hover{color:var(--red); background:var(--red-soft);}
+
+  .detail{
+    display:none; background:var(--bg); border-top:1px dashed var(--line);
+  }
+  .detail.open{display:table-row;}
+  .detail-inner{padding:16px 10px 20px;}
+  .detail-inner table{background:var(--panel); border-radius:10px; overflow:hidden; border:1px solid var(--line);}
+  .detail-inner th{background:var(--teal-soft);}
+  .detail-inner td:nth-child(2), .detail-inner td:nth-child(3), .detail-inner td:nth-child(4){text-align:right; font-variant-numeric:tabular-nums;}
+  .detail-inner th:nth-child(2), .detail-inner th:nth-child(3), .detail-inner th:nth-child(4){text-align:right;}
+
+  .section-title{font-size:15px; font-weight:700; margin:34px 0 14px;}
+  .charts-grid{display:grid; grid-template-columns: 1.3fr 1fr; gap:18px;}
+  @media (max-width:900px){ .charts-grid{grid-template-columns:1fr;} }
+  .chart-box{position:relative; height:280px;}
+  .chart-box.small{height:230px;}
+  .footnote{font-size:12px; color:var(--ink-soft); margin-top:26px; border-top:1px solid var(--line); padding-top:14px;}
+
+  .map-grid{display:grid; grid-template-columns: 1.3fr 1fr; gap:20px; align-items:start;}
+  @media (max-width:800px){ .map-grid{grid-template-columns:1fr;} }
+  .map-box{background:var(--bg); border-radius:10px; border:1px solid var(--line); padding:8px;}
+  .map-box svg{width:100%; height:auto; display:block;}
+  .ward-path{stroke:var(--panel); stroke-width:1.4; cursor:pointer; transition:opacity .12s;}
+  .ward-path:hover{opacity:.8;}
+  .ward-path.selected{stroke:var(--ink); stroke-width:2.2;}
+  .ward-label{font-size:8px; fill:var(--ink-soft); pointer-events:none; text-anchor:middle;}
+  .legend{display:flex; flex-direction:column; gap:6px; font-size:12.5px; color:var(--ink-soft); margin-bottom:14px;}
+  .legend-row{display:flex; align-items:center; gap:8px;}
+  .swatch{width:13px; height:13px; border-radius:4px; display:inline-block; border:1px solid var(--line);}
+  .ward-info{background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:14px;}
+  .ward-info-empty{color:var(--ink-soft); font-size:13px;}
+  .ward-info h3{margin:0 0 8px; font-size:15px;}
+  .ward-info .wi-row{display:flex; justify-content:space-between; font-size:13.5px; padding:4px 0; border-bottom:1px solid var(--line);}
+  .ward-info .wi-row:last-child{border-bottom:none;}
+  .ward-info .wi-staff{font-size:12.5px; color:var(--ink-soft); margin-top:8px;}
+
+  .formulary-panel{margin-bottom:18px;}
+  .formulary-head{display:flex; align-items:flex-start; justify-content:space-between; gap:16px;}
+  .formulary-sub{margin:0; font-size:13px; color:var(--ink-soft); max-width:56ch;}
+  .formulary-intro{font-size:13.5px; color:var(--ink-soft); max-width:78ch; margin:14px 0;}
+  .tabs{display:flex; gap:6px; margin:16px 0 14px; border-bottom:1px solid var(--line);}
+  .tab-btn{background:none; border:none; padding:9px 4px; margin-right:14px; font-size:14px; font-weight:600; color:var(--ink-soft); cursor:pointer; border-bottom:2px solid transparent; font-family:inherit;}
+  .tab-btn.active{color:var(--teal); border-bottom-color:var(--teal);}
+  .formulary-table-wrap{overflow-x:auto;}
+  .formulary-table-wrap table{min-width:560px;}
+  .formulary-table-wrap td:nth-child(2){width:150px;}
+  .hours-input{width:90px; padding:6px 8px; border-radius:7px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font-size:13.5px; font-family:inherit; text-align:right;}
+  .hours-input:focus{outline:2px solid var(--teal); outline-offset:1px;}
+  .hours-input.edited{border-color:var(--amber); background:var(--amber-soft);}
+  .formulary-foot{display:flex; align-items:center; justify-content:space-between; margin-top:14px;}
+  .edited-note{font-size:12px; color:var(--amber);}
+  .panel-head-row{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;}
+  .panel-head-row h2{margin:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <div class="eyebrow">Health visiting workforce</div>
+    <h1>Staff Activity &amp; Capacity Calculator</h1>
+    <p>Add staff members with their role and WTE to see planned monthly activity against available capacity, drawn from the HV, Band 5 and Band 4 allocation models.</p>
+  </header>
+
+  <div class="panel formulary-panel">
+    <div class="formulary-head">
+      <div>
+        <h2 style="margin:0 0 3px;">How the calculation works</h2>
+        <p class="formulary-sub">Every figure below comes from the workbook's allocation model. Expand it to see the logic and adjust any of the assumptions.</p>
+      </div>
+      <button class="btn ghost" id="formularyBtn" type="button">Show the formulary</button>
+    </div>
+    <div id="formularyBody" style="display:none;">
+      <p class="formulary-intro">For a given role and WTE, the model looks up two things: <strong>available hours</strong> — the working capacity that WTE represents each month — and a set of <strong>planned activity hours</strong> — antenatal visits, reviews, clinics, supervision, meetings and so on, each with its own monthly hours. Adding up the activity hours gives <strong>planned hours</strong>; <strong>available − planned</strong> is the spare or over capacity you see in the team table. The three roles (Health Visitor, Band 5, Band 4) each have their own set of activities and hours.</p>
+      <p class="formulary-intro">The numbers below are the <strong>full-time (1.0 WTE)</strong> figures — everything scales down proportionally for part-time staff. Change any figure to reflect local time-allocation data; the team table, map and charts update immediately. Use <em>Reset to workbook defaults</em> to undo your changes for a role.</p>
+      <div class="tabs" id="roleTabs">
+        <button class="tab-btn" data-role="hv" type="button">Health Visitor</button>
+        <button class="tab-btn" data-role="band5" type="button">Band 5</button>
+        <button class="tab-btn" data-role="band4" type="button">Band 4</button>
+      </div>
+      <div id="formularyContent"></div>
+    </div>
+  </div>
+
+  <div class="grid-top">
+    <div class="panel">
+      <h2>Add a staff member</h2>
+      <label for="inName">Staff member</label>
+      <input type="text" id="inName" placeholder="e.g. Jordan Smith">
+
+      <label for="inRole">Role / allocation model</label>
+      <select id="inRole">
+        <option value="hv">Health Visitor</option>
+        <option value="band5">Band 5</option>
+        <option value="band4">Band 4</option>
+      </select>
+
+      <label for="inWard">Locality (Waltham Forest ward)</label>
+      <select id="inWard"><option value="">Unassigned</option></select>
+
+      <label>WTE</label>
+      <div class="wte-grid" id="wteGrid"></div>
+
+      <button class="btn" id="addBtn">Add staff member</button>
+    </div>
+
+    <div class="panel">
+      <h2>Team summary</h2>
+      <div class="stat-row" id="statRow"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head-row">
+      <h2>Team <span class="count" id="teamCount"></span></h2>
+      <button class="btn ghost" id="exportCsvBtn" type="button" style="display:none;">Export to CSV</button>
+    </div>
+    <div id="tableWrap"></div>
+  </div>
+
+  <div id="mapSection" style="display:none;">
+    <div class="section-title">Capacity by area — Waltham Forest</div>
+    <div class="panel">
+      <div class="map-grid">
+        <div class="map-box"><svg id="wfMap" xmlns="http://www.w3.org/2000/svg"></svg></div>
+        <div>
+          <div class="legend">
+            <div class="legend-row"><span class="swatch" style="background:var(--line);"></span> No staff assigned</div>
+            <div class="legend-row"><span class="swatch" style="background:var(--teal-soft);"></span> Spare capacity</div>
+            <div class="legend-row"><span class="swatch" style="background:var(--teal);"></span> Near full capacity</div>
+            <div class="legend-row"><span class="swatch" style="background:var(--red);"></span> Over capacity</div>
+          </div>
+          <div id="wardInfo" class="ward-info">
+            <div class="ward-info-empty">Click a ward on the map to see who covers it and how their capacity looks.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="chartsSection" style="display:none;">
+    <div class="section-title">Capacity at a glance</div>
+    <div class="charts-grid">
+      <div class="panel">
+        <h2>Available vs planned hours, per person</h2>
+        <div class="chart-box"><canvas id="chartPerStaff"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2>Team utilisation</h2>
+        <div class="chart-box small"><canvas id="chartUtil"></canvas></div>
+      </div>
+      <div class="panel" style="grid-column:1/-1;">
+        <h2>Where the hours go — top activities across the team</h2>
+        <div class="chart-box"><canvas id="chartActivities"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">Figures come from the HV Allocation, HV Band 5 and Band 4 allocation tables. Planned hours are the sum of the activities listed for each person, so they'll match what you see even after adjusting the formulary. Data and any adjustments stay in this browser only.</div>
+</div>
+
+<script>
+/* ---------- Source allocation tables (from the workbook) ---------- */
+/* Each row: [WTE, col2, col3, col4, ... last column = cumulative planned hours] */
+const TABLES = {
+  hv: {
+    availableCol: 5, plannedCol: 28,
+    rows: [
+      [1,   3, 6, 13, 116, 39, 13, 26, 2,4,2,4,2,4, 6,9, 4,3, 7.5, 6,  1,1, 8.4, 4,4,4,1, 125.4],
+      [0.9, 3, 6, 12, 105, 36, 12, 24, 2,4,2,4,2,4, 6,9, 4,3, 7.5, 5.4,1,1, 7.6, 4,4,4,1, 119.5],
+      [0.8, 3, 6, 11, 93,  33, 11, 22, 2,4,2,4,2,4, 5,7.5,3,3, 7.5, 4.8,1,1, 6.7, 4,4,4,1, 112],
+      [0.7, 2, 4, 9,  81,  27, 9,  18, 2,4,2,4,2,4, 4,6, 3,3, 7.5, 4.2,1,1, 6,   4,4,4,1, 98.2],
+      [0.6, 2, 4, 8,  70,  24, 8,  16, 2,4,2,4,2,4, 4,6, 2,1.5,7.5,3.6,1,1, 5,   4,4,4,1, 90.6],
+      [0.5, 2, 4, 7,  58,  21, 7,  14, 1,2,1,2,1,2, 4,6, 2,1.5,3.75,3, 1,1, 4.2, 2,2,2,0.5,68.45],
+      [0.4, 1, 2, 5,  46,  15, 5,  10, 1,2,1,2,1,2, 3,4.5,1,1.5,3.75,2.4,1,1, 3.4, 2,2,2,0.5,54.55],
+      [0.3, 1, 2, 4,  35,  12, 4,  8,  1,2,1,2,1,2, 3,4.5,1,0.75,3.75,1.8,1,1, 2.5, 2,2,2,0.5,47.8],
+      [0.2, 1, 2, 3,  23,  9,  3,  6,  1,2,1,2,1,2, 2,3, 0,0.75,3.75,1.2,1,1, 1.7, 1,1,1,0.5,37.4],
+      [0.1, 1, 2, 2,  12,  6,  2,  3,  1,2,1,2,1,2, 1,1.5,0,0,3.75,0.6,1,1, 0.85,1,1,1,0.5,28.2]
+    ]
+  },
+  band5: {
+    availableCol: 3, plannedCol: 16,
+    rows: [
+      [1,   43, 116, 32.25, 6, 43, 32.25, 6, 4,12, 1,1, 4,4, 25,   111.5],
+      [0.9, 39, 105, 29.25, 5, 39, 29.25, 5, 4,12, 1,1, 4,4, 22.5, 103],
+      [0.8, 35, 93,  26.25, 5, 35, 26.25, 5, 4,12, 1,1, 4,4, 20,   94.5],
+      [0.7, 30, 81,  22.5,  4, 30, 22.5,  4, 3,9,  1,1, 4,4, 17.5, 81.5],
+      [0.6, 26, 70,  19.5,  4, 26, 19.5,  4, 3,9,  1,1, 4,4, 15,   73],
+      [0.5, 22, 58,  16.5,  3, 22, 16.5,  3, 2,6,  1,1, 2,2, 13.75,58.75],
+      [0.4, 17, 46,  12.75, 3, 17, 12.75, 3, 2,6,  1,1, 2,2, 10,   47.5],
+      [0.3, 13, 35,  9.75,  2, 13, 9.75,  2, 1,3,  1,1, 2,2, 7.5,  36],
+      [0.2, 9,  23,  6.75,  2, 9,  6.75,  2, 0,0,  1,1, 1,1, 5,    22.5],
+      [0.1, 5,  12,  3.75,  1, 5,  3.75,  1, 0,0,  1,1, 1,1, 2.5,  14]
+    ]
+  },
+  band4: {
+    availableCol: 2, plannedCol: 18,
+    rows: [
+      [1,   116, 30, 22.5,  4, 30, 22.5,  4, 1,6, 4,12, 1,1, 4,4, 35,   108],
+      [0.9, 105, 27, 20.25, 4, 27, 20.25, 4, 1,6, 4,12, 1,1, 4,4, 31.5, 100],
+      [0.8, 93,  24, 18,    3, 24, 18,    3, 1,6, 4,12, 1,1, 4,4, 28,   92],
+      [0.7, 81,  21, 15.75, 3, 21, 15.75, 3, 1,6, 3,9,  1,1, 4,4, 24.5, 81],
+      [0.6, 70,  18, 13.5,  3, 18, 13.5,  3, 1,6, 3,9,  1,1, 4,4, 21,   73],
+      [0.5, 58,  15, 11.25, 2, 15, 11.25, 2, 1,6, 2,6,  1,1, 2,2, 17.5, 58],
+      [0.4, 46,  12, 9,     2, 12, 9,     2, 1,6, 2,6,  1,1, 2,2, 14,   50],
+      [0.3, 35,  9,  6.75,  1, 9,  6.75,  1, 1,6, 1,3,  1,1, 2,2, 10.5, 39],
+      [0.2, 23,  6,  4.5,   1, 6,  4.5,   1, 0,0, 0,0,  1,1, 1,1, 7,    20],
+      [0.1, 12,  3,  2.25,  1, 3,  2.25,  1, 0,0, 0,0,  1,1, 1,1, 3.5,  12]
+    ]
+  }
+};
+
+const ROLE_LABEL = { hv:"Health Visitor", band5:"Band 5", band4:"Band 4" };
+
+/* Activity rows, column numbers refer to 1-indexed position in the row arrays above */
+const ACTIVITIES = {
+  hv: [
+    {label:"UP/UPP antenatal",                    alloc:2,  hours:3,  covers:"Home visit and record writing"},
+    {label:"New birth visits",                    alloc:4,  hours:6,  covers:"Visit, NBO and record writing"},
+    {label:"6-8 week checks",                     alloc:7,  hours:8,  covers:"Universal check"},
+    {label:"3-4 month UP/UPP",                    alloc:9,  hours:10, covers:"Home visit and record writing"},
+    {label:"8-12 month UP/UPP",                   alloc:11, hours:12, covers:"Review activity"},
+    {label:"2-2.5 year UP/UPP",                   alloc:13, hours:14, covers:"Review activity"},
+    {label:"Transfer-in assessments",             alloc:15, hours:16, covers:"Average 1.5 hours each"},
+    {label:"Healthy Child Clinic",                alloc:17, hours:18, covers:"Clinic delivery"},
+    {label:"Duty cover",                          hours:19, covers:"Duty cover"},
+    {label:"Safeguarding / vulnerable meetings",  hours:20, covers:"Meetings and report writing"},
+    {label:"Clinical / management supervision",   hours:21, covers:"Supervision"},
+    {label:"Safeguarding supervision",            hours:22, covers:"Supervision"},
+    {label:"UP/UPP case management",              hours:23, covers:"Case management outside reviews"},
+    {label:"Locality and team meetings",          hours:24, covers:"Locality and organisational meetings"},
+    {label:"Allocation",                          hours:25, covers:"Allocated work"},
+    {label:"Locality work / health promotion",    hours:26, covers:"Locality and health-promotion activity"},
+    {label:"Specialist service meetings",         hours:27, covers:"For example PiMHs / Gateway"}
+  ],
+  band5: [
+    {label:"Antenatal reviews",                   alloc:2, sessions:5, hours:4,  covers:"Assessment and record writing"},
+    {label:"3-4 month reviews",                   alloc:6, sessions:8, hours:7,  covers:"Review activity and record writing"},
+    {label:"Healthy Child Clinic",                alloc:9, hours:10, covers:"Clinic delivery"},
+    {label:"Clinical / management supervision",   hours:11, covers:"Supervision"},
+    {label:"Safeguarding supervision",             hours:12, covers:"Supervision"},
+    {label:"Locality and team meetings",          hours:13, covers:"Locality and organisational meetings"},
+    {label:"Allocation",                          hours:14, covers:"Allocated work"},
+    {label:"Locality work / HV support",          hours:15, covers:"AE, follow-ups and health promotion"}
+  ],
+  band4: [
+    {label:"8-12 month reviews",                  alloc:3, sessions:5, hours:4,  covers:"Review activity and record writing"},
+    {label:"2-2.5 year reviews",                  alloc:6, sessions:8, hours:7,  covers:"Review activity and record writing"},
+    {label:"Follow-up / DNA sessions",            sessions:9, hours:10, covers:"Follow-up and DNA activity"},
+    {label:"Healthy Child Clinic",                alloc:11, hours:12, covers:"Clinic delivery"},
+    {label:"Clinical / management supervision",   hours:13, covers:"Supervision"},
+    {label:"Safeguarding supervision",            hours:14, covers:"Supervision"},
+    {label:"Locality and team meetings",          hours:15, covers:"Locality and organisational meetings"},
+    {label:"Allocation",                          hours:16, covers:"Allocated work"},
+    {label:"Locality work / HV support",          hours:17, covers:"AE, follow-ups, health promotion and community engagement"}
+  ]
+};
+
+const WTE_OPTIONS = [1,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1];
+
+/* Waltham Forest ward boundaries (2013 ward geography), pre-projected to SVG coordinates */
+const WF_WARDS = {"viewBox":"0 0 640 560","wards":[{"code":"E05000590","name":"Cann Hall","path":"M 247.0,531.5 L 244.8,521.4 L 246.2,512.5 L 259.7,471.0 L 261.1,463.7 L 269.5,463.9 L 275.8,466.9 L 275.5,480.2 L 277.4,490.4 L 281.9,491.2 L 285.4,493.9 L 296.2,507.6 L 300.3,515.1 L 284.8,524.3 L 284.0,523.2 L 282.5,524.1 L 276.8,514.7 L 266.9,520.3 L 265.1,517.7 L 260.1,523.0 L 264.2,529.3 L 259.7,534.9 L 246.2,538.0 L 247.0,531.5 Z","cx":267.9,"cy":502.7},{"code":"E05000591","name":"Cathall","path":"M 191.0,527.4 L 198.2,520.6 L 207.6,505.2 L 231.5,480.7 L 242.7,466.2 L 243.9,466.6 L 246.7,461.4 L 259.7,471.0 L 246.2,512.5 L 244.8,521.4 L 247.0,531.5 L 245.3,531.7 L 245.1,530.0 L 244.5,531.3 L 240.7,531.8 L 238.1,530.2 L 226.5,532.3 L 198.5,542.0 L 195.8,529.6 L 191.0,527.4 Z","cx":228.8,"cy":506.3},{"code":"E05000592","name":"Chapel End","path":"M 148.0,290.6 L 142.3,278.1 L 141.7,272.6 L 169.4,266.5 L 170.0,264.2 L 171.5,262.7 L 171.8,255.5 L 185.1,253.7 L 191.9,245.2 L 197.0,244.3 L 202.8,242.3 L 212.5,242.6 L 217.9,246.7 L 221.8,247.2 L 216.7,268.0 L 215.9,282.7 L 217.6,294.7 L 223.6,311.4 L 198.2,320.9 L 184.8,324.6 L 176.0,325.3 L 169.2,323.5 L 165.6,300.5 L 159.5,301.8 L 160.0,305.6 L 152.9,309.6 L 149.9,292.4 L 148.0,290.6 Z","cx":187.5,"cy":285.0},{"code":"E05000593","name":"Chingford Green","path":"M 312.4,68.1 L 310.9,74.8 L 312.6,79.2 L 314.3,82.9 L 309.6,94.7 L 308.1,103.3 L 301.1,114.0 L 298.3,113.5 L 298.8,116.8 L 297.2,117.1 L 297.0,122.1 L 294.8,123.8 L 295.3,127.0 L 286.0,121.0 L 268.8,121.3 L 252.6,123.9 L 248.2,122.7 L 243.8,119.3 L 237.1,114.8 L 225.5,99.4 L 212.7,96.8 L 199.9,90.9 L 182.3,89.8 L 181.6,93.6 L 177.7,91.9 L 176.4,88.7 L 171.0,88.5 L 177.9,71.1 L 183.0,54.2 L 186.3,19.6 L 196.6,18.0 L 202.9,20.0 L 199.2,29.0 L 200.0,33.8 L 205.2,35.3 L 212.3,34.2 L 214.2,38.7 L 226.0,33.3 L 231.2,43.8 L 261.0,45.5 L 286.3,52.0 L 295.3,51.0 L 304.2,47.4 L 305.4,65.8 L 312.4,68.1 Z","cx":245.4,"cy":76.3},{"code":"E05000594","name":"Endlebury","path":"M 150.4,130.4 L 171.0,88.5 L 176.4,88.7 L 177.7,91.9 L 181.6,93.6 L 182.3,89.8 L 199.9,90.9 L 212.7,96.8 L 225.5,99.4 L 237.1,114.8 L 243.8,119.3 L 240.3,125.7 L 234.8,142.9 L 232.4,157.5 L 226.7,158.5 L 220.8,156.8 L 219.8,159.1 L 216.1,158.7 L 216.4,154.6 L 203.6,152.7 L 196.5,145.7 L 171.6,146.5 L 171.6,150.2 L 155.3,149.8 L 155.4,145.7 L 150.4,145.6 L 149.3,149.1 L 146.3,150.7 L 146.7,149.4 L 142.6,148.3 L 145.3,139.5 L 150.4,130.4 Z","cx":195.5,"cy":124.1},{"code":"E05000595","name":"Forest","path":"M 194.5,412.0 L 175.7,398.3 L 188.2,392.5 L 191.4,395.8 L 202.3,390.6 L 207.6,384.3 L 247.4,358.2 L 250.8,359.7 L 277.8,360.4 L 279.9,360.5 L 279.1,365.2 L 280.5,368.8 L 279.0,369.6 L 286.4,392.7 L 286.3,409.2 L 283.2,417.4 L 283.3,419.5 L 280.1,419.7 L 273.2,404.4 L 256.9,413.2 L 253.2,406.5 L 221.7,433.1 L 209.6,439.2 L 199.7,433.7 L 199.1,417.6 L 194.5,412.0 Z","cx":238.0,"cy":395.7},{"code":"E05000596","name":"Grove Green","path":"M 207.6,505.2 L 203.6,494.4 L 195.1,485.4 L 189.9,462.5 L 193.1,452.1 L 198.1,445.3 L 199.7,433.7 L 209.6,439.2 L 238.4,455.6 L 241.0,465.4 L 242.7,466.2 L 231.5,480.7 L 207.6,505.2 Z","cx":213.2,"cy":467.7},{"code":"E05000597","name":"Hale End and Highams Park","path":"M 231.8,192.4 L 226.0,229.0 L 230.8,230.7 L 232.8,228.8 L 233.1,230.0 L 236.9,229.3 L 238.0,233.3 L 246.4,231.7 L 247.3,232.7 L 251.9,226.6 L 258.1,222.0 L 260.9,224.9 L 265.5,225.0 L 266.0,220.1 L 272.5,221.0 L 275.7,219.5 L 275.6,217.7 L 279.0,216.7 L 281.4,219.4 L 280.4,220.5 L 282.9,222.1 L 284.4,220.6 L 287.7,221.0 L 292.5,225.8 L 293.6,229.1 L 292.1,228.1 L 286.5,241.2 L 271.2,275.5 L 269.9,295.5 L 263.4,297.8 L 261.9,302.1 L 223.6,311.4 L 217.6,294.7 L 215.9,282.7 L 216.7,268.0 L 221.8,247.2 L 217.9,246.7 L 212.5,242.6 L 202.8,242.3 L 197.0,244.3 L 196.8,237.0 L 199.5,235.5 L 192.5,232.2 L 192.4,230.2 L 200.6,229.1 L 202.0,225.6 L 210.8,222.4 L 209.5,218.3 L 219.9,214.2 L 218.2,202.7 L 228.3,191.5 L 229.8,190.6 L 231.8,192.4 Z","cx":244.3,"cy":257.0},{"code":"E05000598","name":"Hatch Lane","path":"M 231.8,192.4 L 233.0,181.2 L 232.4,157.5 L 234.8,142.9 L 240.3,125.7 L 243.8,119.3 L 248.2,122.7 L 252.6,123.9 L 268.8,121.3 L 286.0,121.0 L 295.3,127.0 L 291.7,138.6 L 290.3,139.4 L 291.9,141.9 L 289.9,142.7 L 291.2,144.3 L 289.9,146.7 L 286.9,149.4 L 285.0,149.2 L 285.1,151.2 L 282.3,152.3 L 281.0,156.9 L 275.9,160.2 L 277.3,163.2 L 276.6,167.8 L 256.9,166.9 L 282.5,179.0 L 298.6,202.8 L 299.7,209.9 L 292.5,225.8 L 287.7,221.0 L 284.4,220.6 L 282.9,222.1 L 280.4,220.5 L 281.4,219.4 L 279.0,216.7 L 275.6,217.7 L 275.7,219.5 L 272.5,221.0 L 266.0,220.1 L 265.5,225.0 L 260.9,224.9 L 258.1,222.0 L 251.9,226.6 L 247.3,232.7 L 246.4,231.7 L 238.0,233.3 L 236.9,229.3 L 233.1,230.0 L 232.8,228.8 L 230.8,230.7 L 226.0,229.0 L 231.8,192.4 Z","cx":260.3,"cy":176.9},{"code":"E05000599","name":"High Street","path":"M 21.5,390.9 L 18.0,381.1 L 21.0,375.6 L 26.3,370.7 L 32.3,365.8 L 38.9,357.2 L 43.3,346.8 L 48.6,341.3 L 55.8,345.4 L 74.7,342.5 L 108.2,336.9 L 124.3,330.5 L 129.3,348.4 L 139.5,344.0 L 140.0,345.8 L 158.3,341.5 L 160.8,345.3 L 164.2,362.4 L 129.1,368.8 L 116.4,373.9 L 79.7,404.5 L 65.2,422.8 L 55.3,445.5 L 48.6,440.8 L 44.8,432.0 L 37.7,428.8 L 30.8,419.4 L 21.5,390.9 Z","cx":77.5,"cy":376.6},{"code":"E05000600","name":"Higham Hill","path":"M 58.2,287.5 L 71.1,271.5 L 81.0,255.1 L 88.1,239.8 L 108.8,225.7 L 113.1,218.9 L 115.6,218.0 L 116.9,221.2 L 113.0,225.9 L 124.6,230.4 L 128.0,229.7 L 132.7,232.5 L 170.0,264.2 L 169.4,266.5 L 141.7,272.6 L 142.3,278.1 L 148.0,290.6 L 136.3,292.7 L 136.4,295.5 L 131.7,296.9 L 132.4,303.3 L 125.7,309.2 L 128.2,315.4 L 120.1,318.7 L 118.4,316.8 L 117.1,317.9 L 118.6,319.3 L 110.6,325.2 L 109.6,322.5 L 93.7,324.7 L 93.6,326.8 L 92.2,327.1 L 79.4,327.3 L 74.7,342.5 L 55.8,345.4 L 48.6,341.3 L 51.9,336.4 L 47.9,326.8 L 47.8,320.1 L 50.7,311.4 L 51.6,302.7 L 55.0,297.7 L 58.2,287.5 Z","cx":101.7,"cy":283.1},{"code":"E05000601","name":"Hoe Street","path":"M 164.2,362.4 L 160.8,345.3 L 158.3,341.5 L 157.7,336.0 L 159.9,331.3 L 169.2,323.5 L 176.0,325.3 L 184.8,324.6 L 198.2,320.9 L 200.2,329.2 L 199.4,337.0 L 201.3,351.8 L 197.0,355.0 L 197.9,359.1 L 193.9,360.6 L 192.4,363.4 L 197.8,376.9 L 198.0,383.3 L 201.1,384.7 L 207.6,384.3 L 202.3,390.6 L 191.4,395.8 L 188.2,392.5 L 175.7,398.3 L 170.4,400.9 L 157.9,381.0 L 165.8,378.0 L 164.2,362.4 Z","cx":180.5,"cy":359.3},{"code":"E05000602","name":"Larkswood","path":"M 232.4,157.5 L 233.0,181.2 L 231.8,192.4 L 229.8,190.6 L 228.3,191.5 L 218.2,202.7 L 219.9,214.2 L 209.5,218.3 L 210.8,222.4 L 202.0,225.6 L 200.6,229.1 L 192.4,230.2 L 192.5,232.2 L 199.5,235.5 L 196.8,237.0 L 197.0,244.3 L 191.9,245.2 L 185.1,253.7 L 171.8,255.5 L 170.3,225.6 L 166.6,208.8 L 168.9,191.1 L 168.4,175.7 L 171.6,150.2 L 171.6,146.5 L 196.5,145.7 L 203.6,152.7 L 216.4,154.6 L 216.1,158.7 L 219.8,159.1 L 220.8,156.8 L 226.7,158.5 L 232.4,157.5 Z","cx":194.9,"cy":192.9},{"code":"E05000603","name":"Lea Bridge","path":"M 170.4,400.9 L 175.7,398.3 L 194.5,412.0 L 180.1,424.3 L 160.4,437.7 L 165.2,446.6 L 156.0,451.9 L 157.7,455.9 L 131.8,468.7 L 126.6,476.4 L 126.2,480.0 L 115.5,484.0 L 105.0,479.2 L 96.8,481.1 L 92.7,477.7 L 84.9,479.9 L 75.7,477.8 L 73.6,475.1 L 68.6,472.9 L 70.3,463.6 L 55.3,445.5 L 65.2,422.8 L 72.0,427.7 L 97.5,414.8 L 101.4,413.5 L 102.5,415.8 L 109.8,411.1 L 111.3,412.5 L 117.1,409.5 L 121.0,413.7 L 122.6,413.7 L 124.5,420.0 L 133.2,416.7 L 134.6,419.8 L 170.4,400.9 Z","cx":118.1,"cy":441.7},{"code":"E05000604","name":"Leyton","path":"M 126.2,480.0 L 126.6,476.4 L 131.8,468.7 L 157.7,455.9 L 156.0,451.9 L 165.2,446.6 L 160.4,437.7 L 180.1,424.3 L 194.5,412.0 L 199.1,417.6 L 199.7,433.7 L 198.1,445.3 L 193.1,452.1 L 189.9,462.5 L 195.1,485.4 L 203.6,494.4 L 207.6,505.2 L 198.2,520.6 L 191.0,527.4 L 170.5,534.0 L 169.9,533.0 L 168.7,523.2 L 165.5,513.5 L 150.1,502.2 L 146.9,501.6 L 145.6,494.6 L 140.5,487.8 L 129.4,480.4 L 126.2,480.0 Z","cx":173.8,"cy":477.3},{"code":"E05000605","name":"Leytonstone","path":"M 283.2,417.4 L 286.6,419.0 L 288.4,422.2 L 291.4,420.9 L 292.2,434.0 L 289.2,432.4 L 287.2,433.1 L 291.6,452.1 L 287.5,456.5 L 276.3,457.0 L 275.8,466.9 L 269.5,463.9 L 261.1,463.7 L 259.7,471.0 L 246.7,461.4 L 243.9,466.6 L 242.7,466.2 L 241.0,465.4 L 238.4,455.6 L 209.6,439.2 L 221.7,433.1 L 253.2,406.5 L 256.9,413.2 L 273.2,404.4 L 280.1,419.7 L 283.3,419.5 L 283.2,417.4 Z","cx":257.7,"cy":437.7},{"code":"E05000606","name":"Markhouse","path":"M 164.2,362.4 L 165.8,378.0 L 157.9,381.0 L 170.4,400.9 L 134.6,419.8 L 133.2,416.7 L 124.5,420.0 L 122.6,413.7 L 121.0,413.7 L 117.1,409.5 L 111.3,412.5 L 109.8,411.1 L 102.5,415.8 L 101.4,413.5 L 97.5,414.8 L 72.0,427.7 L 65.2,422.8 L 79.7,404.5 L 116.4,373.9 L 129.1,368.8 L 164.2,362.4 Z","cx":125.4,"cy":395.2},{"code":"E05000607","name":"Valley","path":"M 170.0,264.2 L 132.7,232.5 L 128.0,229.7 L 124.6,230.4 L 113.0,225.9 L 116.9,221.2 L 115.6,218.0 L 113.1,218.9 L 112.5,214.5 L 107.8,205.3 L 108.5,199.9 L 118.5,180.2 L 140.1,152.3 L 142.6,148.3 L 146.7,149.4 L 146.3,150.7 L 149.3,149.1 L 150.4,145.6 L 155.4,145.7 L 155.3,149.8 L 171.6,150.2 L 168.4,175.7 L 168.9,191.1 L 166.6,208.8 L 170.3,225.6 L 171.8,255.5 L 171.5,262.7 L 170.0,264.2 Z","cx":145.5,"cy":200.6},{"code":"E05000608","name":"William Morris","path":"M 148.0,290.6 L 149.9,292.4 L 152.9,309.6 L 160.0,305.6 L 159.5,301.8 L 165.6,300.5 L 169.2,323.5 L 159.9,331.3 L 157.7,336.0 L 158.3,341.5 L 140.0,345.8 L 139.5,344.0 L 129.3,348.4 L 124.3,330.5 L 108.2,336.9 L 74.7,342.5 L 79.4,327.3 L 92.2,327.1 L 93.6,326.8 L 93.7,324.7 L 109.6,322.5 L 110.6,325.2 L 118.6,319.3 L 117.1,317.9 L 118.4,316.8 L 120.1,318.7 L 128.2,315.4 L 125.7,309.2 L 132.4,303.3 L 131.7,296.9 L 136.4,295.5 L 136.3,292.7 L 148.0,290.6 Z","cx":132.7,"cy":323.2},{"code":"E05000609","name":"Wood Street","path":"M 269.9,295.5 L 269.3,301.1 L 268.4,313.0 L 272.8,358.3 L 277.8,360.4 L 250.8,359.7 L 247.4,358.2 L 207.6,384.3 L 201.1,384.7 L 198.0,383.3 L 197.8,376.9 L 192.4,363.4 L 193.9,360.6 L 197.9,359.1 L 197.0,355.0 L 201.3,351.8 L 199.4,337.0 L 200.2,329.2 L 198.2,320.9 L 223.6,311.4 L 261.9,302.1 L 263.4,297.8 L 269.9,295.5 Z","cx":233.3,"cy":340.3}]};
+
+/* ---------- Calculation helpers ---------- */
+function getRow(role, wte){
+  return TABLES[role].rows.find(r => Math.abs(r[0]-wte) < 0.001);
+}
+
+/* Full-time (1.0 WTE) baseline figures, used as the editable "formulary" */
+const BASELINE = {};
+Object.keys(TABLES).forEach(role=>{
+  const row = getRow(role, 1);
+  const table = TABLES[role];
+  BASELINE[role] = {
+    available: row[table.availableCol - 1],
+    activities: {}
+  };
+  ACTIVITIES[role].forEach(a=>{ BASELINE[role].activities[a.label] = row[a.hours - 1]; });
+});
+
+/* User adjustments, keyed by role. null = use workbook defaults exactly. */
+let OVERRIDES = { hv:null, band5:null, band4:null };
+try{
+  const savedOv = JSON.parse(localStorage.getItem('capacityCalcOverrides') || 'null');
+  if(savedOv) OVERRIDES = Object.assign({hv:null,band5:null,band4:null}, savedOv);
+}catch(e){}
+function persistOverrides(){
+  try{ localStorage.setItem('capacityCalcOverrides', JSON.stringify(OVERRIDES)); }catch(e){}
+}
+
+function calcStaff(role, wte){
+  const ov = OVERRIDES[role];
+  if(!ov){
+    const row = getRow(role, wte);
+    const table = TABLES[role];
+    const available = row[table.availableCol - 1];
+    const activities = ACTIVITIES[role].map(a => ({
+      label: a.label,
+      covers: a.covers,
+      alloc: a.alloc ? row[a.alloc - 1] : null,
+      sessions: a.sessions ? row[a.sessions - 1] : null,
+      hours: row[a.hours - 1]
+    }));
+    // Planned hours = sum of the activities shown below, so it always matches
+    // what's on screen (the workbook's own cumulative-hours figure doesn't
+    // always reconcile exactly to that sum for every WTE/role combination).
+    const planned = activities.reduce((sum,a)=>sum+a.hours, 0);
+    return { available, planned, unallocated: available - planned, activities };
+  }
+  // Adjusted: scale the edited full-time figures proportionally by WTE.
+  const available = (ov.available !== undefined ? ov.available : BASELINE[role].available) * wte;
+  const activities = ACTIVITIES[role].map(a=>{
+    const base1wte = (ov.activities && ov.activities[a.label] !== undefined) ? ov.activities[a.label] : BASELINE[role].activities[a.label];
+    return { label:a.label, covers:a.covers, alloc:null, sessions:null, hours: base1wte * wte };
+  });
+  const planned = activities.reduce((sum,a)=>sum+a.hours, 0);
+  return { available, planned, unallocated: available - planned, activities };
+}
+
+function setOverride(role, key, value){
+  if(!OVERRIDES[role]) OVERRIDES[role] = { available: BASELINE[role].available, activities: Object.assign({}, BASELINE[role].activities) };
+  if(key === 'available') OVERRIDES[role].available = value;
+  else OVERRIDES[role].activities[key] = value;
+  persistOverrides();
+  render();
+}
+function resetRole(role){
+  OVERRIDES[role] = null;
+  persistOverrides();
+  renderFormularyTab(currentFormularyRole);
+  render();
+}
+
+/* ---------- State ---------- */
+let staff = [];
+let openRow = null;
+try{
+  const saved = JSON.parse(localStorage.getItem('capacityCalcStaff') || '[]');
+  if(Array.isArray(saved)) staff = saved;
+}catch(e){ staff = []; }
+
+let currentWTE = 1;
+let charts = {};
+
+function persist(){
+  try{ localStorage.setItem('capacityCalcStaff', JSON.stringify(staff)); }catch(e){}
+}
+
+/* ---------- Build ward picker ---------- */
+const wardSelect = document.getElementById('inWard');
+WF_WARDS.wards.forEach(w=>{
+  const opt = document.createElement('option');
+  opt.value = w.name;
+  opt.textContent = w.name;
+  wardSelect.appendChild(opt);
+});
+
+/* ---------- Build WTE picker ---------- */
+const wteGrid = document.getElementById('wteGrid');
+WTE_OPTIONS.forEach(w=>{
+  const b = document.createElement('button');
+  b.textContent = w.toFixed(1);
+  b.type = 'button';
+  if(w === currentWTE) b.classList.add('active');
+  b.addEventListener('click', ()=>{
+    currentWTE = w;
+    [...wteGrid.children].forEach(c=>c.classList.remove('active'));
+    b.classList.add('active');
+  });
+  wteGrid.appendChild(b);
+});
+
+/* ---------- Add staff ---------- */
+document.getElementById('addBtn').addEventListener('click', ()=>{
+  const nameInput = document.getElementById('inName');
+  const name = nameInput.value.trim() || 'Unnamed staff member';
+  const role = document.getElementById('inRole').value;
+  const ward = wardSelect.value;
+  staff.push({ id: Date.now()+Math.random(), name, role, wte: currentWTE, ward });
+  nameInput.value = '';
+  persist();
+  render();
+});
+
+function removeStaff(id){
+  staff = staff.filter(s=>s.id !== id);
+  if(openRow === id) openRow = null;
+  persist();
+  render();
+}
+
+/* ---------- Render ---------- */
+function fmt(n){
+  if(n === null || n === undefined) return '—';
+  const r = Math.round(n*100)/100;
+  return r % 1 === 0 ? r.toString() : r.toFixed(2).replace(/0$/,'').replace(/\.$/,'');
+}
+
+function statusFor(unallocated, available){
+  if(unallocated < 0) return {cls:'status-over', text:'Over capacity'};
+  if(available>0 && unallocated/available < 0.08) return {cls:'status-tight', text:'Tight'};
+  return {cls:'status-ok', text:'Within capacity'};
+}
+
+let selectedWard = null;
+
+function render(){
+  document.getElementById('teamCount').textContent = staff.length ? `(${staff.length})` : '';
+  document.getElementById('exportCsvBtn').style.display = staff.length ? 'inline-flex' : 'none';
+  renderStats();
+  renderTable();
+  renderCharts();
+  renderMapSection();
+}
+
+/* ---------- CSV export ---------- */
+function csvEscape(val){
+  const s = String(val);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+function exportCsv(){
+  const header = ['Staff member','Role','Area','WTE','Available hours / month','Planned hours / month','Spare (+) / over (-) hours','Status'];
+  const lines = [header.map(csvEscape).join(',')];
+  staff.forEach(s=>{
+    const c = calcStaff(s.role, s.wte);
+    const st = statusFor(c.unallocated, c.available);
+    lines.push([
+      s.name, ROLE_LABEL[s.role], s.ward || '', fmt(s.wte),
+      fmt(c.available), fmt(c.planned), fmt(c.unallocated), st.text
+    ].map(csvEscape).join(','));
+  });
+  const csv = lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'staff-capacity-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+
+/* ---------- Waltham Forest map ---------- */
+function wardStats(wardName){
+  const here = staff.filter(s => s.ward === wardName);
+  let available = 0, planned = 0;
+  here.forEach(s=>{ const c = calcStaff(s.role, s.wte); available += c.available; planned += c.planned; });
+  return { staffList: here, available, planned, unallocated: available - planned };
+}
+
+function wardColor(wardName){
+  const st = wardStats(wardName);
+  const t = themeColors();
+  if(!st.staffList.length) return t.line;
+  if(st.unallocated < 0) return t.red;
+  const ratio = st.available ? st.planned/st.available : 0;
+  if(ratio >= 0.92) return t.teal;
+  // interpolate between teal-soft (spare) and teal (near full)
+  return ratio > 0.55 ? t.teal : t.tealSoft;
+}
+
+function renderMapSection(){
+  const section = document.getElementById('mapSection');
+  if(!staff.length){ section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  const svg = document.getElementById('wfMap');
+  svg.setAttribute('viewBox', WF_WARDS.viewBox);
+  svg.innerHTML = '';
+  WF_WARDS.wards.forEach(w=>{
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', w.path);
+    path.setAttribute('class', 'ward-path' + (selectedWard===w.name ? ' selected' : ''));
+    path.setAttribute('fill', wardColor(w.name));
+    path.addEventListener('click', ()=>{
+      selectedWard = (selectedWard === w.name) ? null : w.name;
+      renderMapSection();
+    });
+    const title = document.createElementNS('http://www.w3.org/2000/svg','title');
+    title.textContent = w.name;
+    path.appendChild(title);
+    svg.appendChild(path);
+  });
+  renderWardInfo();
+}
+
+function renderWardInfo(){
+  const box = document.getElementById('wardInfo');
+  if(!selectedWard){
+    box.innerHTML = '<div class="ward-info-empty">Click a ward on the map to see who covers it and how their capacity looks.</div>';
+    return;
+  }
+  const st = wardStats(selectedWard);
+  const listHtml = st.staffList.length
+    ? st.staffList.map(s=>`${escapeHtml(s.name)} (${ROLE_LABEL[s.role]}, ${fmt(s.wte)} WTE)`).join('<br>')
+    : 'No staff currently assigned to this ward.';
+  box.innerHTML = `
+    <h3>${escapeHtml(selectedWard)}</h3>
+    <div class="wi-row"><span>Staff assigned</span><strong>${st.staffList.length}</strong></div>
+    <div class="wi-row"><span>Available hours</span><strong>${fmt(st.available)}</strong></div>
+    <div class="wi-row"><span>Planned hours</span><strong>${fmt(st.planned)}</strong></div>
+    <div class="wi-row"><span>${st.unallocated<0?'Over capacity by':'Spare capacity'}</span><strong>${fmt(Math.abs(st.unallocated))} hrs</strong></div>
+    <div class="wi-staff">${listHtml}</div>
+  `;
+}
+
+function renderStats(){
+  const row = document.getElementById('statRow');
+  if(!staff.length){
+    row.innerHTML = `<div class="stat" style="grid-column:1/-1;"><div class="lbl">Add staff members to see totals for available hours, planned activity and spare capacity.</div></div>`;
+    return;
+  }
+  let totalWTE=0, totalAvail=0, totalPlanned=0;
+  staff.forEach(s=>{
+    const c = calcStaff(s.role, s.wte);
+    totalWTE += s.wte; totalAvail += c.available; totalPlanned += c.planned;
+  });
+  const util = totalAvail ? Math.round((totalPlanned/totalAvail)*100) : 0;
+  row.innerHTML = `
+    <div class="stat"><div class="num">${staff.length}</div><div class="lbl">Staff added</div></div>
+    <div class="stat"><div class="num">${fmt(totalWTE)}</div><div class="lbl">Total WTE</div></div>
+    <div class="stat"><div class="num">${fmt(totalAvail)}</div><div class="lbl">Available hrs / month</div></div>
+    <div class="stat"><div class="num">${util}%</div><div class="lbl">Team utilisation</div></div>
+  `;
+}
+
+function renderTable(){
+  const wrap = document.getElementById('tableWrap');
+  if(!staff.length){
+    wrap.innerHTML = `<div class="empty">No staff added yet. Use the form above to add your first team member.</div>`;
+    return;
+  }
+  let rows = '';
+  staff.forEach(s=>{
+    const c = calcStaff(s.role, s.wte);
+    const pct = c.available ? Math.min(100, (c.planned/c.available)*100) : 0;
+    const over = c.unallocated < 0;
+    const st = statusFor(c.unallocated, c.available);
+    rows += `
+      <tr class="staff-row" data-id="${s.id}">
+        <td class="name-cell">${escapeHtml(s.name)}</td>
+        <td><span class="role-tag">${ROLE_LABEL[s.role]}</span></td>
+        <td>${s.ward ? escapeHtml(s.ward) : '—'}</td>
+        <td>${fmt(s.wte)}</td>
+        <td>${fmt(c.available)} hrs</td>
+        <td>${fmt(c.planned)} hrs</td>
+        <td class="bar-cell">
+          <div class="bar-track"><div class="bar-fill ${over?'over':''}" style="width:${pct}%;"></div></div>
+          <div class="bar-meta">${over ? `${fmt(Math.abs(c.unallocated))} hrs over` : `${fmt(c.unallocated)} hrs spare`}</div>
+        </td>
+        <td><span class="status-pill ${st.cls}">${st.text}</span></td>
+        <td><button class="remove-x" data-remove="${s.id}" title="Remove">✕</button></td>
+      </tr>
+      <tr class="detail ${openRow===s.id?'open':''}" data-detail="${s.id}">
+        <td colspan="9"><div class="detail-inner">${activityTable(c)}</div></td>
+      </tr>
+    `;
+  });
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Staff member</th><th>Role</th><th>Area</th><th>WTE</th><th>Available</th><th>Planned</th><th>Capacity used</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+  wrap.querySelectorAll('tr.staff-row').forEach(tr=>{
+    tr.addEventListener('click', (e)=>{
+      if(e.target.closest('[data-remove]')) return;
+      const id = tr.dataset.id;
+      openRow = (String(openRow) === id) ? null : (staff.find(s=>String(s.id)===id)||{}).id;
+      renderTable();
+    });
+  });
+  wrap.querySelectorAll('[data-remove]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      removeStaff(Number(btn.dataset.remove) || btn.dataset.remove);
+    });
+  });
+}
+
+function activityTable(c){
+  const hasSessions = c.activities.some(a=>a.sessions !== null && a.sessions !== undefined);
+  let rows = c.activities.map(a=>`
+    <tr>
+      <td>${escapeHtml(a.label)}</td>
+      <td>${a.alloc !== null && a.alloc !== undefined ? fmt(a.alloc) : '—'}</td>
+      ${hasSessions ? `<td>${a.sessions !== null && a.sessions !== undefined ? fmt(a.sessions) : '—'}</td>` : ''}
+      <td>${fmt(a.hours)}</td>
+      <td>${escapeHtml(a.covers)}</td>
+    </tr>
+  `).join('');
+  return `
+    <table>
+      <thead><tr>
+        <th>Activity</th><th>Monthly allocation</th>${hasSessions?'<th>Sessions / month</th>':''}<th>Hours / month</th><th>What this covers</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+/* ---------- Charts ---------- */
+function themeColors(){
+  const styles = getComputedStyle(document.documentElement);
+  return {
+    ink: styles.getPropertyValue('--ink').trim(),
+    inkSoft: styles.getPropertyValue('--ink-soft').trim(),
+    teal: styles.getPropertyValue('--teal').trim(),
+    tealDeep: styles.getPropertyValue('--teal-deep').trim(),
+    tealSoft: styles.getPropertyValue('--teal-soft').trim(),
+    amber: styles.getPropertyValue('--amber').trim(),
+    red: styles.getPropertyValue('--red').trim(),
+    line: styles.getPropertyValue('--line').trim()
+  };
+}
+
+function destroyCharts(){
+  Object.values(charts).forEach(ch=>ch && ch.destroy());
+  charts = {};
+}
+
+function renderCharts(){
+  const section = document.getElementById('chartsSection');
+  destroyCharts();
+  if(!staff.length){ section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  // Wait for the browser to actually lay out the now-visible section before
+  // measuring canvas size — creating a Chart in the same tick as unhiding
+  // its container can otherwise measure it at 0x0 and never repaint.
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{ buildCharts(); });
+  });
+}
+
+function buildCharts(){
+  if(typeof Chart === 'undefined'){
+    document.getElementById('chartsSection').innerHTML =
+      '<div class="panel"><div class="empty">Charts library did not load — check your connection and refresh.</div></div>';
+    return;
+  }
+  const t = themeColors();
+
+  // Per-staff available vs planned
+  const labels = staff.map(s=>s.name);
+  const availData = staff.map(s=>calcStaff(s.role,s.wte).available);
+  const plannedData = staff.map(s=>calcStaff(s.role,s.wte).planned);
+  try{
+  charts.perStaff = new Chart(document.getElementById('chartPerStaff'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      {label:'Available hours', data:availData, backgroundColor:t.line, borderRadius:5},
+      {label:'Planned hours', data:plannedData, backgroundColor:t.teal, borderRadius:5}
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ color:t.inkSoft, boxWidth:12, font:{size:11.5} } } },
+      scales:{
+        x:{ ticks:{ color:t.inkSoft, font:{size:11.5} }, grid:{ display:false } },
+        y:{ ticks:{ color:t.inkSoft }, grid:{ color:t.line } }
+      }
+    }
+  });
+  }catch(e){ console.error('perStaff chart failed', e); }
+
+  // Utilisation donut
+  let totalAvail=0, totalPlanned=0;
+  staff.forEach(s=>{ const c=calcStaff(s.role,s.wte); totalAvail+=c.available; totalPlanned+=c.planned; });
+  const spare = Math.max(0, totalAvail-totalPlanned);
+  const over = Math.max(0, totalPlanned-totalAvail);
+  try{
+  charts.util = new Chart(document.getElementById('chartUtil'), {
+    type:'doughnut',
+    data:{
+      labels: over>0 ? ['Planned (within capacity)','Over capacity'] : ['Planned hours','Spare capacity'],
+      datasets:[{
+        data: over>0 ? [totalAvail, over] : [totalPlanned, spare],
+        backgroundColor: over>0 ? [t.teal, t.red] : [t.teal, t.line],
+        borderWidth:0
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins:{ legend:{ position:'bottom', labels:{ color:t.inkSoft, boxWidth:12, font:{size:11.5} } } }
+    }
+  });
+  }catch(e){ console.error('util chart failed', e); }
+
+  // Aggregate activity hours across team (top 8)
+  const activityTotals = {};
+  staff.forEach(s=>{
+    const c = calcStaff(s.role, s.wte);
+    c.activities.forEach(a=>{
+      activityTotals[a.label] = (activityTotals[a.label]||0) + (a.hours||0);
+    });
+  });
+  const sorted = Object.entries(activityTotals).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  try{
+  charts.activities = new Chart(document.getElementById('chartActivities'), {
+    type:'bar',
+    data:{
+      labels: sorted.map(x=>x[0]),
+      datasets:[{ label:'Hours / month across team', data: sorted.map(x=>Math.round(x[1]*100)/100), backgroundColor:t.tealDeep, borderRadius:5 }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ ticks:{ color:t.inkSoft }, grid:{ color:t.line } },
+        y:{ ticks:{ color:t.inkSoft, font:{size:11.5} }, grid:{ display:false } }
+      }
+    }
+  });
+  }catch(e){ console.error('activities chart failed', e); }
+}
+
+/* ---------- Formulary (editable reference tables) ---------- */
+let currentFormularyRole = 'hv';
+
+document.getElementById('formularyBtn').addEventListener('click', ()=>{
+  const body = document.getElementById('formularyBody');
+  const btn = document.getElementById('formularyBtn');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  btn.textContent = open ? 'Show the formulary' : 'Hide the formulary';
+  if(!open && !document.getElementById('formularyContent').innerHTML){
+    renderFormularyTab(currentFormularyRole);
+  }
+});
+
+document.querySelectorAll('#roleTabs .tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    currentFormularyRole = btn.dataset.role;
+    renderFormularyTab(currentFormularyRole);
+  });
+});
+
+function renderFormularyTab(role){
+  document.querySelectorAll('#roleTabs .tab-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.role === role);
+  });
+  const ov = OVERRIDES[role];
+  const availVal = ov && ov.available !== undefined ? ov.available : BASELINE[role].available;
+  const availEdited = !!(ov && ov.available !== undefined);
+  let rows = ACTIVITIES[role].map(a=>{
+    const val = ov && ov.activities && ov.activities[a.label] !== undefined ? ov.activities[a.label] : BASELINE[role].activities[a.label];
+    const edited = !!(ov && ov.activities && ov.activities[a.label] !== undefined);
+    return `
+      <tr>
+        <td>${escapeHtml(a.label)}</td>
+        <td><input type="number" step="0.1" min="0" class="hours-input ${edited?'edited':''}" data-role="${role}" data-key="activity" data-label="${escapeHtml(a.label)}" value="${val}"></td>
+        <td>${escapeHtml(a.covers)}</td>
+      </tr>`;
+  }).join('');
+  const hasEdits = !!ov;
+  document.getElementById('formularyContent').innerHTML = `
+    <div class="formulary-table-wrap">
+      <table>
+        <thead><tr><th>Available working hours (full time, 1.0 WTE)</th><th></th><th></th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Available hours / month</td>
+            <td><input type="number" step="0.1" min="0" class="hours-input ${availEdited?'edited':''}" id="availInput" value="${availVal}"></td>
+            <td class="wi-staff">Total working capacity for a full-time member of this role each month</td>
+          </tr>
+        </tbody>
+      </table>
+      <table style="margin-top:16px;">
+        <thead><tr><th>Activity</th><th>Hours / month at 1.0 WTE</th><th>What this covers</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="formulary-foot">
+      <span class="edited-note">${hasEdits ? 'This role has local adjustments applied.' : ''}</span>
+      <button class="btn secondary" id="resetRoleBtn" type="button">Reset ${ROLE_LABEL[role]} to workbook defaults</button>
+    </div>
+  `;
+  document.getElementById('availInput').addEventListener('change', e=>{
+    setOverride(role, 'available', parseFloat(e.target.value) || 0);
+    renderFormularyTab(role);
+  });
+  document.querySelectorAll('.hours-input[data-key="activity"]').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      setOverride(role, e.target.dataset.label, parseFloat(e.target.value) || 0);
+      renderFormularyTab(role);
+    });
+  });
+  document.getElementById('resetRoleBtn').addEventListener('click', ()=> resetRole(role));
+}
+
+render();
+</script>
+</body>
+</html>
